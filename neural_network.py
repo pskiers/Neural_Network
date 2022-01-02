@@ -28,10 +28,6 @@ def grad_loss(X, Xd):
 
 
 class Layer:
-    """
-    Niesprawdzone (czyli pewnie nie działające): back_propagation, back_propagation_output_layer
-    Sprawdzone tylko dla wektorów, nie macierzy: predict
-    """
     _input_size: int
     _output_size: int
     _weights: np.ndarray
@@ -60,7 +56,8 @@ class Layer:
         Używać dla każdej warstwy oprócz wyjściowej. Wyznacza gradienty dla następnej warstwy dq_ds
         i gradient funkcji straty po wagach tej warstwy dq_dweights
         """
-        dq_dy = (grad_from_previous_layer * weights_from_previous_layer).sum(axis=1)
+        weights_from_previous_layer = np.delete(weights_from_previous_layer, -1, 1)
+        dq_dy = np.matmul(grad_from_previous_layer, weights_from_previous_layer)
         dq_ds = dq_dy * self._activation_grad(self._neurons_sums)
         dq_dweights = np.matmul(np.transpose(dq_ds), self._input)
         return dq_ds, dq_dweights
@@ -84,6 +81,9 @@ class Layer:
         self._neurons_sums = np.transpose(np.matmul(self._weights, np.transpose(self._input)))
         self._output = self._activation(self._neurons_sums)
         return self._output
+
+    def get_weigths(self):
+        return self._weights
 
 
 
