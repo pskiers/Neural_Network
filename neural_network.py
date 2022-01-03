@@ -17,14 +17,15 @@ vectorize_RtoR = partial(np.vectorize, signature='()->()', otypes=[np.float])
 vectorize_VtoV = partial(np.vectorize, signature='(m)->(m)', otypes=[np.float])
 
 
-@vectorize_RtoR
-def relu(x: float) -> float:
-    return max(x, 0)
+def relu(x: np.ndarray) -> np.ndarray:
+    x[x < 0] = 0
+    return x
 
 
-@vectorize_RtoR
-def grad_relu(x: float) -> float:
-    return 0 if x <= 0 else 1
+def grad_relu(x: np.ndarray) -> np.ndarray:
+    result = np.ones_like(x)
+    result[x < 0] = 0
+    return result
 
 
 def arctan(x: np.ndarray) -> np.ndarray:
@@ -128,7 +129,7 @@ class Layer:
 
 
 @vectorize_VtoV
-def _determine_class(pred: np.ndarray) -> np.ndarray:
+def determine_class(pred: np.ndarray) -> np.ndarray:
     result = np.zeros_like(pred)
     i = np.argmax(pred)
     result[i] = 1
@@ -152,8 +153,8 @@ class NeuralNetworkHistoryRecord:
         return f'train_loss: {train_loss}, val_loss: {val_loss}'
 
     def accuracies(self) -> Tuple[float, float]:
-        train_pred = _determine_class(self.train_pred)
-        val_pred = _determine_class(self.val_pred)
+        train_pred = determine_class(self.train_pred)
+        val_pred = determine_class(self.val_pred)
         return (accuracy_score(self.train_true, train_pred),
                 accuracy_score(self.val_true, val_pred))
 
@@ -224,58 +225,30 @@ class NeuralNetwork:
             loss=loss
         )
 
-    def fit(self, X: np.ndarray, y: np.ndarray,
+    def fit(self, X_train: np.ndarray, y_train: np.ndarray,
+            X_val: np.ndarray, y_val: np.ndarray,
             learn_rate: float,
             epochs: int,
             loss: R2nToRn,
             loss_grad: R2nToRn,
-            batch_size: int = 1,
-            validation_data: Tuple[np.ndarray, np.ndarray] = None,
-            n_validation_splits: int = None) -> List[NeuralNetworkHistoryRecord]:
-
-        if validation_data is not None and n_validation_splits is not None:
-            raise ValueError(
-                "validation_data and n_validation_splits cannot be both set")
-        if validation_data is None and n_validation_splits is None:
-            raise ValueError(
-                "validation_data or n_validation_splits must be set")
-
-        common_fit = {
-            'learn_rate': learn_rate,
-            'batch_size': batch_size,
-            'loss_grad': loss_grad,
-        }
+            batch_size: int = 1) -> List[NeuralNetworkHistoryRecord]:
 
         history: List[NeuralNetworkHistoryRecord] = []
 
-        if n_validation_splits is not None:
-            n_repeats = ceil(epochs / n_validation_splits)
-            kfold = RepeatedKFold(
-                n_splits=n_validation_splits,
-                n_repeats=n_repeats)
-
-            for i, (train_index, val_index) in enumerate(kfold.split(X)):
-                if i >= epochs:
-                    break
-                X_train, y_train = X[train_index, :], y[train_index, :]
-                X_val, y_val = X[val_index, :], y[val_index, :]
-                self._fit_epoch(X_train, y_train, **common_fit)
-                record = self._validate(loss, X_train, y_train, X_val, y_val)
-                history.append(record)
-                msg = record.all_str(
-                    2) if self._is_classifier else record.losses_str()
-                print(f'EPOCH {i+1}:\t{msg}')
-
-        else:
-            X_train, y_train = X, y
-            X_val, y_val = validation_data
+        try:
             for i in range(epochs):
-                self._fit_epoch(X_train, y_train, **common_fit)
-                record = self._validate(loss, X_train, y_train, X_val, y_val)
+                self._fit_epoch(X_train, y_train,
+                                learn_rate=learn_rate,
+                                batch_size=batch_size,
+                                loss_grad=loss_grad,)
+                record = self._validate(
+                    loss, X_train, y_train, X_val, y_val)
                 history.append(record)
                 msg = record.all_str(
                     2) if self._is_classifier else record.losses_str()
                 print(f'EPOCH {i+1}:\t{msg}')
+        except KeyboardInterrupt:
+            pass
 
         return history
 
