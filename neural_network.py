@@ -4,6 +4,8 @@ import numpy as np
 from dataclasses import dataclass, field
 from sklearn.metrics import accuracy_score
 from sklearn.datasets import load_iris
+from numpy.random import uniform
+from numpy.core.fromnumeric import shape, size
 
 
 def relu(x):
@@ -52,10 +54,6 @@ def mse_grad(y: np.ndarray, y_pred: np.ndarray):
 
 
 class Layer:
-    """
-    Niesprawdzone (czyli pewnie nie działające): back_propagation, back_propagation_output_layer
-    Sprawdzone tylko dla wektorów, nie macierzy: predict
-    """
     _input_size: int
     _output_size: int
     _weights: np.ndarray
@@ -69,16 +67,16 @@ class Layer:
 
     def __init__(self, input_size: int, output_size: int,
                  activation: Callable[[float], float],
-                 activation_grad: Callable[[float], float]):
+                 activation_grad: Callable[[float], float], output_inicialization=False):
         self._input_size = input_size
         self._output_size = output_size
         self._activation_vec = activation
         self._activation_grad = activation_grad
-        self._activation_vec = np.vectorize(
-            activation, signature="()->()")
-        self._activation_grad_vec = np.vectorize(
-            activation_grad, signature="()->()")
-        self._weights = np.zeros(shape=(output_size, input_size + 1))
+        if output_inicialization:
+            self._weights = np.zeros(shape=(output_size, input_size + 1))
+        else:
+            self._weights = uniform(low=(-1 / np.sqrt(input_size)), high=(
+                1 / np.sqrt(input_size)), size=(output_size, input_size + 1))
         self._neurons_sums = np.zeros(shape=(1, output_size))
         self._output = np.zeros(shape=(1, output_size))
         self._input = np.zeros(shape=(1, input_size + 1))
@@ -90,16 +88,13 @@ class Layer:
         Używać dla każdej warstwy oprócz wyjściowej. Wyznacza gradienty dla następnej warstwy dq_ds
         i gradient funkcji straty po wagach tej warstwy dq_dweights
         """
-        # dq_dy = (
-        #     grad_from_previous_layer *
-        #     weights_from_previous_layer).sum(
-        #     axis=1)
+        weights_from_previous_layer = np.delete(
+            weights_from_previous_layer, -1, 1)
         dq_dy = np.matmul(
-            np.transpose(weights_from_previous_layer[:, :-1]),
-            grad_from_previous_layer)
-        dq_ds = dq_dy * \
-            np.transpose(self._activation_grad_vec(self._neurons_sums))
-        dq_dweights = np.matmul(dq_ds, self._input)
+            grad_from_previous_layer,
+            weights_from_previous_layer)
+        dq_ds = dq_dy * self._activation_grad(self._neurons_sums)
+        dq_dweights = np.matmul(np.transpose(dq_ds), self._input)
         return dq_ds, dq_dweights
 
     def back_propagation_output_layer(self, grad_loss: Callable[[float], float],
