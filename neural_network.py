@@ -1,4 +1,4 @@
-from sklearn.model_selection import KFold
+from sklearn.model_selection import RepeatedKFold
 from typing import Callable, Generator, List, Tuple
 import numpy as np
 from dataclasses import dataclass, field
@@ -6,50 +6,48 @@ from sklearn.metrics import accuracy_score
 from sklearn.datasets import load_iris
 from numpy.random import uniform
 from numpy.core.fromnumeric import shape, size
+from functools import partial
+from math import ceil
+
+RToR = Callable[[float], float]
+RnToRn = Callable[[np.ndarray], np.ndarray]
+R2nToRn = Callable[[np.ndarray, np.ndarray], np.ndarray]
+
+vectorize_RtoR = partial(np.vectorize, signature='()->()')
+vectorize_VtoV = partial(np.vectorize, signature='(m)->(m)')
 
 
-def relu(x):
+@vectorize_RtoR
+def relu(x: float) -> float:
     return max(x, 0)
 
 
-def grad_relu(x):
+@vectorize_RtoR
+def grad_relu(x: float) -> float:
     return 0 if x <= 0 else 1
 
 
-def arctan(x):
+def arctan(x: np.ndarray) -> np.ndarray:
     return np.arctan(x)
 
 
-def grad_arctan(x):
+def grad_arctan(x: np.ndarray) -> np.ndarray:
     return 1 / (1 + x**2)
 
 
-def linear(x):
+def linear(x: np.ndarray) -> np.ndarray:
     return x
 
 
-def grad_linear(x):
-    return 1
+def grad_linear(x: np.ndarray) -> np.ndarray:
+    return np.ones_like(x)
 
 
-def loss(X, Xd):
-    return (X - Xd)**2
+def mse(y: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
+    return (np.linalg.norm(y - y_pred, axis=1) ** 2)
 
 
-def grad_loss(X, Xd):
-    return 2 * (X - Xd)
-
-
-RToR = Callable[[float], float]
-R2nToR = Callable[[np.ndarray, np.ndarray], float]
-GradR2nToR = Callable[[np.ndarray, np.ndarray], np.ndarray]
-
-
-def mse(y: np.ndarray, y_pred: np.ndarray):
-    return (np.linalg.norm(y - y_pred, axis=1) ** 2).mean()
-
-
-def mse_grad(y: np.ndarray, y_pred: np.ndarray):
+def mse_grad(y: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
     return 2 * (y - y_pred)
 
 
@@ -57,20 +55,18 @@ class Layer:
     _input_size: int
     _output_size: int
     _weights: np.ndarray
-    _activation: Callable[[float], float]
-    _activation_grad: Callable[[float], float]
-    _activation_vectorized: Callable[[float], float]
-    _activation_grad_vectorized: Callable[[float], float]
+    _activation: RnToRn
+    _activation_grad: RnToRn
     _neurons_sums: np.ndarray
     _output: np.ndarray
     _input: np.ndarray
 
     def __init__(self, input_size: int, output_size: int,
-                 activation: Callable[[float], float],
-                 activation_grad: Callable[[float], float], output_inicialization=False):
+                 activation: RnToRn,
+                 activation_grad: RnToRn, output_inicialization=False):
         self._input_size = input_size
         self._output_size = output_size
-        self._activation_vec = activation
+        self._activation = activation
         self._activation_grad = activation_grad
         if output_inicialization:
             self._weights = np.zeros(shape=(output_size, input_size + 1))
@@ -97,14 +93,14 @@ class Layer:
         dq_dweights = np.matmul(np.transpose(dq_ds), self._input)
         return dq_ds, dq_dweights
 
-    def back_propagation_output_layer(self, grad_loss: Callable[[float], float],
+    def back_propagation_output_layer(self, grad_loss: R2nToRn,
                                       expected: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
         Używać tylko dla warstwy wyjściowej. Wyznacza gradienty dla następnej warstwy dq_ds
         i gradient funkcji straty po wagach tej warstwy dq_dweights
         """
         dq_dy = grad_loss(self._output, expected)
-        dq_ds = dq_dy * self._activation_grad_vec(self._neurons_sums)
+        dq_ds = dq_dy * self._activation_grad(self._neurons_sums)
         dq_dweights = np.matmul(np.transpose(dq_ds), self._input)
         return dq_ds, dq_dweights
 
@@ -118,7 +114,7 @@ class Layer:
                 self._weights,
                 np.transpose(
                     self._input)))
-        self._output = self._activation_vec(self._neurons_sums)
+        self._output = self._activation(self._neurons_sums)
         return self._output
 
     def get_output_size(self):
@@ -131,103 +127,108 @@ class Layer:
         return self._weights
 
 
+@vectorize_VtoV
+def _determine_class(pred: np.ndarray) -> np.ndarray:
+    result = np.zeros_like(pred)
+    i = np.argmax(pred)
+    result[i] = 1
+    return result
+
+
 @dataclass
 class NeuralNetworkHistoryRecord:
-    loss: float
-    accuracy: float
-    val_loss: float
-    val_accuracy: float
+    train_true: np.ndarray
+    train_pred: np.ndarray
+    val_true: np.ndarray
+    val_pred: np.ndarray
+    loss: R2nToRn
 
-    def __str__(self) -> str:
-        return (f'TRAIN(acc: {self.accuracy}, loss: {self.loss}) '
-                f'VAL(acc: {self.val_accuracy}, loss: {self.val_loss})')
+    def losses(self) -> Tuple[float, float]:
+        return (self.loss(self.train_true, self.train_pred).mean(),
+                self.loss(self.val_true, self.val_pred).mean())
+
+    def losses_str(self) -> str:
+        train_loss, val_loss = self.losses()
+        return f'train_loss: {train_loss}, val_loss: {val_loss}'
+
+    def accuracies(self) -> Tuple[float, float]:
+        train_pred = _determine_class(self.train_pred)
+        val_pred = _determine_class(self.val_pred)
+        return (accuracy_score(self.train_true, train_pred),
+                accuracy_score(self.val_true, val_pred))
+
+    def all_str(self, tabs: int = 0) -> str:
+        train_loss, val_loss = self.losses()
+        train_acc, val_acc = self.accuracies()
+        tabs = tabs * "\t"
+        return (f'train_loss: {train_loss:<18}, train_acc: {train_acc}\n{tabs}'
+                f'val_loss  : {val_loss:<18}, val_acc  : {val_acc}')
+
+
+def _to_batches(X: np.ndarray, y: np.ndarray, batch_size: int
+                ) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
+    n_samples = X.shape[0]
+    for i in range(0, n_samples, batch_size):
+        j = min(n_samples, i + batch_size)
+        yield X[i:j, :], y[i:j, :]
 
 
 class NeuralNetwork:
     _layers: List[Layer]
+    _is_classifier: bool
 
-    def __init__(self, *layers: Layer):
+    def __init__(self, *layers: Layer, is_classifier: bool = False):
         self._layers = list(layers)
+        self._is_classifier = is_classifier
 
     def add_layer(self, layer: Layer):
         self._layers.append(layer)
 
-    @ classmethod
-    def _to_batches(cls, X: np.ndarray, y: np.ndarray, batch_size: int
-                    ) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
-        n_samples = X.shape[0]
-        for i in range(0, n_samples, batch_size):
-            j = min(n_samples, i + batch_size)
-            yield X[i:j, :], y[i:j, :]
-
     def _fit_epoch(self, X_train: np.ndarray, y_train: np.ndarray,
                    learn_rate: float, batch_size: int,
-                   loss_grad: GradR2nToR) -> None:
+                   loss_grad: R2nToRn) -> None:
+
         n_layers = len(self._layers)
-        n_hidden_layers = len(self._layers) - 1
+        n_hidden_layers = n_layers - 1
 
-        for X_batch, y_batch in self._to_batches(X_train, y_train, batch_size):
-            sum_dq_dweights = [
+        for X_batch, y_batch in _to_batches(X_train, y_train, batch_size):
+            self.predict(X_batch)
+
+            dq_dweights = [
                 np.zeros_like(l.get_weights()) for l in self._layers]
+            prev_dq_ds, dq_dweights[-1] = self._layers[-1].back_propagation_output_layer(
+                loss_grad, y_batch)
+            prev_layer = self._layers[-1]
 
-            for x, y in zip(X_batch, y_batch):
-                x: np.ndarray
-                y: np.ndarray
-
-                # # convert to vertical vectors
-                y = y.reshape(-1, 1)
-                x = x.reshape(1, -1)
-
-                # calculate gradient matrix
-                y_pred = self.predict(x)
-                dq_dweights = [None] * n_layers
-                prev_dq_ds, dq_dweights[-1] = self._layers[-1].back_propagation_output_layer(
-                    loss_grad, y)
-                prev_layer = self._layers[-1]
-
-                for i in range(n_hidden_layers - 1, -1, -1):
-                    prev_dq_ds, dq_dweights[i] = self._layers[i].back_propagation(
-                        prev_dq_ds,
-                        prev_layer.get_weights()
-                    )
-                    prev_layer = self._layers[i]
-
-                # add to sum
-                for i, grad in enumerate(dq_dweights):
-                    sum_dq_dweights[i] += grad
+            for i in range(n_hidden_layers - 1, -1, -1):
+                prev_dq_ds, dq_dweights[i] = self._layers[i].back_propagation(
+                    prev_dq_ds,
+                    prev_layer.get_weights()
+                )
+                prev_layer = self._layers[i]
 
             n_samples = X_batch.shape[0]
-            mean_dq_dweights = [grad / n_samples for grad in sum_dq_dweights]
-            for layer, grad in zip(self._layers, mean_dq_dweights):
-                layer.nudge_weights(grad, learn_rate)
+            for layer, grad in zip(self._layers, dq_dweights):
+                layer.nudge_weights(grad / n_samples, learn_rate)
 
-    # def _predict_sample(self, x: np.ndarray) -> List[np.ndarray]:
-    #     """
-    #     for a given vertical sample vector x
-    #     returns list of vertical prediction vectors for every layer
-    #     """
-    #     result = [x]
-    #     for layer in self._layers:
-    #         result.append(layer.predict(result[-1]))
-    #     return result
-
-    def _validate(self, loss: R2nToR,
+    def _validate(self, loss: R2nToRn,
                   X_train: np.ndarray, y_train: np.ndarray,
                   X_val: np.ndarray, y_val: np.ndarray) -> NeuralNetworkHistoryRecord:
         y_train_pred = self.predict(X_train)
         y_val_pred = self.predict(X_val)
         return NeuralNetworkHistoryRecord(
-            loss(y_train_pred, y_train),
-            accuracy_score(y_train, y_train_pred),
-            loss(y_val_pred, y_val),
-            accuracy_score(y_val, y_val_pred),
+            train_true=y_train,
+            train_pred=y_train_pred,
+            val_true=y_val,
+            val_pred=y_val_pred,
+            loss=loss
         )
 
     def fit(self, X: np.ndarray, y: np.ndarray,
             learn_rate: float,
             epochs: int,
-            loss: R2nToR,
-            loss_grad: GradR2nToR,
+            loss: R2nToRn,
+            loss_grad: R2nToRn,
             batch_size: int = 1,
             validation_data: Tuple[np.ndarray, np.ndarray] = None,
             n_validation_splits: int = None) -> List[NeuralNetworkHistoryRecord]:
@@ -248,15 +249,22 @@ class NeuralNetwork:
         history: List[NeuralNetworkHistoryRecord] = []
 
         if n_validation_splits is not None:
-            kfold = KFold(n_validation_splits, shuffle=True)
-            for i, (train_index, val_index) in enumerate(
-                    kfold.split(range(epochs))):
+            n_repeats = ceil(epochs / n_validation_splits)
+            kfold = RepeatedKFold(
+                n_splits=n_validation_splits,
+                n_repeats=n_repeats)
+
+            for i, (train_index, val_index) in enumerate(kfold.split(X)):
+                if i >= epochs:
+                    break
                 X_train, y_train = X[train_index, :], y[train_index, :]
                 X_val, y_val = X[val_index, :], y[val_index, :]
                 self._fit_epoch(X_train, y_train, **common_fit)
                 record = self._validate(loss, X_train, y_train, X_val, y_val)
                 history.append(record)
-                print(f'EPOCH {i+1}:\t{record}')
+                msg = record.all_str(
+                    2) if self._is_classifier else record.losses_str()
+                print(f'EPOCH {i+1}:\t{msg}')
 
         else:
             X_train, y_train = X, y
@@ -265,7 +273,9 @@ class NeuralNetwork:
                 self._fit_epoch(X_train, y_train, **common_fit)
                 record = self._validate(loss, X_train, y_train, X_val, y_val)
                 history.append(record)
-                print(f'EPOCH {i+1}:\t{record}')
+                msg = record.all_str(
+                    2) if self._is_classifier else record.losses_str()
+                print(f'EPOCH {i+1}:\t{msg}')
 
         return history
 
@@ -274,28 +284,3 @@ class NeuralNetwork:
         for layer in self._layers:
             y = layer.predict(y)
         return y
-
-
-if __name__ == "__main__":
-    X, y = load_iris(return_X_y=True)
-    X: np.ndarray
-    y: np.ndarray
-    y = y.reshape(-1, 1)
-
-    input_dim = X.shape[1]
-    hidden_dim = 2
-    output_dim = y.shape[1]
-
-    model = NeuralNetwork()
-    model.add_layer(Layer(input_dim, hidden_dim, relu, grad_relu))
-    model.add_layer(Layer(hidden_dim, output_dim, linear, grad_linear))
-
-    model.fit(
-        X,
-        y,
-        learn_rate=0.4,
-        epochs=40,
-        loss=mse,
-        loss_grad=mse_grad,
-        batch_size=4,
-        n_validation_splits=5)
