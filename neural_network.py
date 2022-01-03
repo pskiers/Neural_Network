@@ -1,6 +1,7 @@
 from typing import Callable, List, Tuple
 import numpy as np
-from numpy.core.fromnumeric import shape
+from numpy.random import uniform
+from numpy.core.fromnumeric import shape, size
 
 
 def relu(x):
@@ -39,12 +40,15 @@ class Layer:
 
     def __init__(self, input_size: int, output_size: int,
                  activation: Callable[[float], float],
-                 activation_grad: Callable[[float], float]):
+                 activation_grad: Callable[[float], float], output_inicialization = False):
         self._input_size = input_size
         self._output_size = output_size
         self._activation = activation
         self._activation_grad = activation_grad
-        self._weights = np.zeros(shape=(output_size, input_size+1))
+        if output_inicialization:
+            self._weights = np.zeros(shape=(output_size, input_size+1))
+        else:
+            self._weights = uniform(low=(-1/np.sqrt(input_size)), high=(1/np.sqrt(input_size)), size=(output_size, input_size+1))
         self._neurons_sums = np.zeros(shape=(1, output_size))
         self._output = np.zeros(shape=(1, output_size))
         self._input = np.zeros(shape=(1, input_size+1))
