@@ -13,8 +13,8 @@ RToR = Callable[[float], float]
 RnToRn = Callable[[np.ndarray], np.ndarray]
 R2nToRn = Callable[[np.ndarray, np.ndarray], np.ndarray]
 
-vectorize_RtoR = partial(np.vectorize, signature='()->()')
-vectorize_VtoV = partial(np.vectorize, signature='(m)->(m)')
+vectorize_RtoR = partial(np.vectorize, signature='()->()', otypes=[np.float])
+vectorize_VtoV = partial(np.vectorize, signature='(m)->(m)', otypes=[np.float])
 
 
 @vectorize_RtoR

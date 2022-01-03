@@ -1,4 +1,3 @@
-from sklearn.model_selection import RepeatedKFold
 from sklearn.preprocessing import OneHotEncoder
 import numpy as np
 from sklearn.datasets import load_iris
@@ -18,6 +17,12 @@ if __name__ == "__main__":
     y: np.ndarray
     y = y.reshape(-1, 1)
 
+    # shuffle (original is ordered)
+    indexes = np.arange(len(X))
+    np.random.shuffle(indexes)
+    X = X[indexes]
+    y = y[indexes]
+
     y_enc = OneHotEncoder(sparse=False, dtype=np.int)
     y = y_enc.fit_transform(y)
 
@@ -36,7 +41,7 @@ if __name__ == "__main__":
         epochs=40,
         loss=mse,
         loss_grad=mse_grad,
-        batch_size=4,
+        batch_size=1,
         n_validation_splits=5)
 
     pass
