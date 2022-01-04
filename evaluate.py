@@ -112,11 +112,13 @@ def plot_history(history: List[NeuralNetworkHistoryRecord], title: str):
     ax_acc.set_ylabel('accuracy')
     ax_acc.plot(train_accuracies, label='train')
     ax_acc.plot(val_accuracies, label='validation')
+    ax_acc.legend()
 
     ax_loss.set_xlabel('epoch')
     ax_loss.set_ylabel('loss')
     ax_loss.plot(train_losses, label='train')
     ax_loss.plot(val_losses, label='validation')
+    ax_loss.legend()
 
     fig.suptitle(title)
     fig.tight_layout()
