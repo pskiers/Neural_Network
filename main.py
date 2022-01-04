@@ -30,7 +30,7 @@ def minist():
         X_rest, y_rest, test_size=0.25)
 
     input_dim = X.shape[1]
-    hidden_dims = [1024, 512, 256, 128]
+    hidden_dims = [512, 256, 128, 64]
     output_dim = y.shape[1]
 
     model = NeuralNetwork(is_classifier=True)
@@ -45,11 +45,11 @@ def minist():
         y_train,
         X_val,
         y_val,
-        learn_rate=0.05,
-        epochs=10000,
+        learn_rate=0.01,
+        epochs=100,
         loss=mse,
         loss_grad=mse_grad,
-        batch_size=128)
+        batch_size=8)
 
     total_time = sum(record.time for record in history)
     mean_time = total_time / len(history)

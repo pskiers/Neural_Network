@@ -1,0 +1,131 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/4.0.0/github-markdown.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release/build/styles/default.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/markdown-it-texmath/css/texmath.min.css">
+<link rel="stylesheet" href="file:////home/ogurczak/.vscode/extensions/goessner.mdmath-2.7.4/themes/default/style.css">
+
+</head>
+<body class="markdown-body">
+<div  ></div>
+<div style="padding: 2% 5%;">
+<div  ></div>
+<h1 style="text-align: center;">
+<div style="color:grey; font-size: 0.6em;">Jakub Ostrzołek, Paweł Skierś</div>
+<div>WSI ćwiczenie 5 - sieci neuronowe</div>
+</h1>
+<h2 id="opis-c487wiczenia">Opis ćwiczenia</h2>
+<p>Celem ćwiczenia było zaimplementowanie sieci neuronowych.</p>
+<p>Klasa implementująca warstę sieci przyjmuje następujące parametry konstruktora:</p>
+<ul>
+<li><code>input_size</code> - wymiar wektora wejściowego</li>
+<li><code>output_size</code> - wymiar wektora wyjściowego</li>
+<li><code>activation</code> - funkcja aktywacji</li>
+<li><code>activation_grad</code> - gradient funkcji aktywacji</li>
+<li><code>output_inicialization</code> - czy inicjalizować wagi zerami (w przeciwnym wypadku inicjalizuje losowo zgodnie z optymalnym rozkładem), powinien być ustawiony na <code>True</code> w ostatniej warstwie</li>
+</ul>
+<p>Klasa implementująca sieć przyjmuje następujące parametry konstruktora:</p>
+<ul>
+<li><code>is_classifier</code> - jeżeli sieć jest klasyfikatorem, to dla każdej epoki jest obliczana również dokładność przewidywania.</li>
+<li><code>layers...</code> - warstwy sieci (można dodać również do istniejącej sieci za pomocą metody <code>add_layer</code>)</li>
+</ul>
+<p>Sieć posiada funkcje <code>fit</code> i <code>predict</code>, służące odpowiednio do trenowania i przewidywania, działające zgodnie z modelami z biblioteki <code>sklearn</code>.</p>
+<h2 id="wykorzystane-zewnc499trzne-biblioteki">Wykorzystane zewnętrzne biblioteki</h2>
+<ul>
+<li><code>numpy</code></li>
+<li><code>pandas</code></li>
+<li><code>matplotlib</code></li>
+<li><code>sklearn</code></li>
+</ul>
+<h2 id="testowanie-sieci">Testowanie sieci</h2>
+<p>Aby przetestowyać sieć należy wykonać skrypt <code>main.py</code>, uprzednio zmieniając jej parametry zgodnie z zapotrzebowaniem.<br>
+Skrypt wygeneruje nową sieć, wytrenuje ją na podstawie danych ze zbioru <em>minist</em>, oraz pokaże wykresy przedstawiające historię trenowania sieci oraz jej osiągi w postaci metryk i macierzy konfuzji.</p>
+<h2 id="wykresy-i-wnioski">Wykresy i wnioski</h2>
+<h3 id="batch-size">Batch size</h3>
+<table>
+<thead>
+<tr>
+<th>batch size</th>
+<th>historia</th>
+<th>metryki</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8</td>
+<td><img src="plots/batch_size/history,layers=[512,256,128,64],batch_size=8,learn_rate=0.01,epochs=100.png" alt="wykres" class="loading" id="image-hash--299895517" data-src="plots/batch_size/history,layers=%5B512,256,128,64%5D,batch_size=8,learn_rate=0.01,epochs=100.png"></td>
+<td><img src="plots/batch_size/metrics,layers=[512,256,128,64],batch_size=8,learn_rate=0.01,epochs=100.png" alt="wykres" class="loading" id="image-hash--1114883502" data-src="plots/batch_size/metrics,layers=%5B512,256,128,64%5D,batch_size=8,learn_rate=0.01,epochs=100.png"></td>
+</tr>
+<tr>
+<td>32</td>
+<td><img src="plots/batch_size/history,layers=[512,256,128,64],batch_size=32,learn_rate=0.01,epochs=100.png" alt="wykres" class="loading" id="image-hash--1131383130" data-src="plots/batch_size/history,layers=%5B512,256,128,64%5D,batch_size=32,learn_rate=0.01,epochs=100.png"></td>
+<td><img src="plots/batch_size/metrics,layers=[512,256,128,64],batch_size=32,learn_rate=0.01,epochs=100.png" alt="wykres" class="loading" id="image-hash--626206889" data-src="plots/batch_size/metrics,layers=%5B512,256,128,64%5D,batch_size=32,learn_rate=0.01,epochs=100.png"></td>
+</tr>
+<tr>
+<td>128</td>
+<td><img src="plots/batch_size/history,layers=[512,256,128,64],batch_size=128,learn_rate=0.01,epochs=100.png" alt="wykres" class="loading" id="image-hash--397883260" data-src="plots/batch_size/history,layers=%5B512,256,128,64%5D,batch_size=128,learn_rate=0.01,epochs=100.png"></td>
+<td><img src="plots/batch_size/metrics,layers=[512,256,128,64],batch_size=128,learn_rate=0.01,epochs=100.png" alt="wykres" class="loading" id="image-hash--1917288973" data-src="plots/batch_size/metrics,layers=%5B512,256,128,64%5D,batch_size=128,learn_rate=0.01,epochs=100.png"></td>
+</tr>
+<tr>
+<td>512</td>
+<td><img src="plots/batch_size/history,layers=[512,256,128,64],batch_size=512,learn_rate=0.01,epochs=100.png" alt="wykres" class="loading" id="image-hash-768515525" data-src="plots/batch_size/history,layers=%5B512,256,128,64%5D,batch_size=512,learn_rate=0.01,epochs=100.png"></td>
+<td><img src="plots/batch_size/metrics,layers=[512,256,128,64],batch_size=512,learn_rate=0.01,epochs=100.png" alt="wykres" class="loading" id="image-hash--750890188" data-src="plots/batch_size/metrics,layers=%5B512,256,128,64%5D,batch_size=512,learn_rate=0.01,epochs=100.png"></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>im większy batch size, tym szybciej wykonują się epoki (jedna operacja na macierzy jest szybsza niż wiele operacji na jej wierszach, np. dzięki temu, że może zostać użyta jednostka wektorowa; kod z bibliotek może być już skompilowany; wielokrotne wywoływanie funkcji na każdym wierszu jest wolne)</li>
+<li>im mniejszy batch size, tym większa skłonność modelu do przetrenowania (dla większych wartości tego parametru gradient wag jest średnią gradientów wag z większej próby, co lepiej przybliża zbiór walidacyjny / testowy)</li>
+<li>większy batch size poprawia osiągi na zbiorze testowym, ale zbyt duży powoduje spowolnienie uczenia się i pogorsza osiągi.</li>
+</ul>
+<h3 id="learning-rate">Learning rate</h3>
+<table>
+<thead>
+<tr>
+<th>learning rate</th>
+<th>historia</th>
+<th>metryki</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.005</td>
+<td><img src="plots/learning_rate/history,layers=[512,256,128,64],batch_size=128,learn_rate=0.005,epochs=100.png" alt="wykres" class="loading" id="image-hash--1525999935" data-src="plots/learning_rate/history,layers=%5B512,256,128,64%5D,batch_size=128,learn_rate=0.005,epochs=100.png"></td>
+<td><img src="plots/learning_rate/metrics,layers=[512,256,128,64],batch_size=128,learn_rate=0.005,epochs=100.png" alt="wykres" class="loading" id="image-hash--1382936782" data-src="plots/learning_rate/metrics,layers=%5B512,256,128,64%5D,batch_size=128,learn_rate=0.005,epochs=100.png"></td>
+</tr>
+<tr>
+<td>0.01</td>
+<td><img src="plots/learning_rate/history,layers=[512,256,128,64],batch_size=128,learn_rate=0.01,epochs=100.png" alt="wykres" class="loading" id="image-hash-1732309043" data-src="plots/learning_rate/history,layers=%5B512,256,128,64%5D,batch_size=128,learn_rate=0.01,epochs=100.png"></td>
+<td><img src="plots/learning_rate/metrics,layers=[512,256,128,64],batch_size=128,learn_rate=0.01,epochs=100.png" alt="wykres" class="loading" id="image-hash-212903330" data-src="plots/learning_rate/metrics,layers=%5B512,256,128,64%5D,batch_size=128,learn_rate=0.01,epochs=100.png"></td>
+</tr>
+<tr>
+<td>0.05</td>
+<td><img src="plots/learning_rate/history,layers=[512,256,128,64],batch_size=128,learn_rate=0.05,epochs=100.png" alt="wykres" class="loading" id="image-hash--309827665" data-src="plots/learning_rate/history,layers=%5B512,256,128,64%5D,batch_size=128,learn_rate=0.05,epochs=100.png"></td>
+<td><img src="plots/learning_rate/metrics,layers=[512,256,128,64],batch_size=128,learn_rate=0.05,epochs=100.png" alt="wykres" class="loading" id="image-hash--1829233378" data-src="plots/learning_rate/metrics,layers=%5B512,256,128,64%5D,batch_size=128,learn_rate=0.05,epochs=100.png"></td>
+</tr>
+<tr>
+<td>0.1</td>
+<td><img src="plots/learning_rate/history,layers=[512,256,128,64],batch_size=128,learn_rate=0.1,epochs=100.png" alt="wykres" class="loading" id="image-hash-108972421" data-src="plots/learning_rate/history,layers=%5B512,256,128,64%5D,batch_size=128,learn_rate=0.1,epochs=100.png"></td>
+<td><img src="plots/learning_rate/metrics,layers=[512,256,128,64],batch_size=128,learn_rate=0.1,epochs=100.png" alt="wykres" class="loading" id="image-hash-614148662" data-src="plots/learning_rate/metrics,layers=%5B512,256,128,64%5D,batch_size=128,learn_rate=0.1,epochs=100.png"></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>zbyt mały learning rate powoduje, że model się wolniej uczy (wolna eksploracja, duża eksploatacja)</li>
+<li>zbyt duży learning rate powoduje bardziej nieregularne wyniki w uczeniu się modelu, więc trudniej mu znaleźć optimum (szybka eksploracja, mała eksploatacja)</li>
+<li>przekroczenie pewnego progu parametru learning rate powoduje, że model może rozbiegać od rozwiązania</li>
+</ul>
+<div  ></div>
+<!-- 
+1. Overfitting
+2. Underfitting
+3. Batch size
+4. learning rate
+-->
+<div  ></div>
+</div>
+</body>
+</html>

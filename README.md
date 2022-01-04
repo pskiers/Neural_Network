@@ -8,12 +8,18 @@
 ## Opis ćwiczenia
 Celem ćwiczenia było zaimplementowanie sieci neuronowych. 
 
-Klasa implementująca drzewo ma jeden parametr konstruktora:
-* `max_depth` - maksymalna wysokość drzewa powstałego w wyniku uczenia się.
+Klasa implementująca warstę sieci przyjmuje następujące parametry konstruktora:
+* `input_size` - wymiar wektora wejściowego
+* `output_size` - wymiar wektora wyjściowego
+* `activation` - funkcja aktywacji
+* `activation_grad` - gradient funkcji aktywacji
+* `output_inicialization` - czy inicjalizować wagi zerami (w przeciwnym wypadku inicjalizuje losowo zgodnie z optymalnym rozkładem), powinien być ustawiony na `True` w ostatniej warstwie
 
-Klasa ta ma 2 główne funkcje (zgodne z biblioteką sklearn):
-* `fit` - uczenie drzewa na podstawie danych wejściowych i przypisanych im klas wyjściowych,
-* `predict` - przewidywanie klas dla danych wejściowych (wcześniej nauczonych przez `fit`).
+Klasa implementująca sieć przyjmuje następujące parametry konstruktora:
+* `is_classifier` - jeżeli sieć jest klasyfikatorem, to dla każdej epoki jest obliczana również dokładność przewidywania.
+* `layers...` - warstwy sieci (można dodać również do istniejącej sieci za pomocą metody `add_layer`)
+
+Sieć posiada funkcje `fit` i `predict`, służące odpowiednio do trenowania i przewidywania, działające zgodnie z modelami z biblioteki `sklearn`.
 
 ## Wykorzystane zewnętrzne biblioteki
 * `numpy`
@@ -21,40 +27,42 @@ Klasa ta ma 2 główne funkcje (zgodne z biblioteką sklearn):
 * `matplotlib`
 * `sklearn`
 
-## Trenowanie drzewa
-Aby wytrenować drzewo należy wykonać skrypt `main.py` i postępować zgodnie z instrukcjami (`main.py --help`).  
-Skrypt wygeneruje nowe drzewo, wytrenuje je na podstawie danych ze zbioru danych _iris_, oraz pokaże osiągi drzewa w postaci wybranych metryk i macierzy konfuzji na wykresie.
+## Testowanie sieci
+Aby przetestowyać sieć należy wykonać skrypt `main.py`, uprzednio zmieniając jej parametry zgodnie z zapotrzebowaniem.  
+Skrypt wygeneruje nową sieć, wytrenuje ją na podstawie danych ze zbioru _minist_, oraz pokaże wykresy przedstawiające historię trenowania sieci oraz jej osiągi w postaci metryk i macierzy konfuzji.
  
-## Wykresy
-Aby wygenerować wykresy, należy wykonać skrypt `plot.py`. Za pomocą skryptu można wygenerować:
-* macierze konfuzji dla wybranych zbiorów danych
-* porównanie metryk dla wybranych zbiorów danych
-* powyższe wykresy dla najlepszej kombinacji hiperparametrów (pod względem sumy metryk)
+## Wykresy i wnioski
 
-Każdy wykres jest opisany dwoma hiperparametrami:
-* `depth` - maksymalna głębokość drzewa
-* `n_bins` - "rozdzielczość" dyskretyzacji danych wejściowych (dane wejściowe są grupowane w klasy tak, by w każdej klasie była porównywalna ilość rekordów)
 
-Oto przykładowe wyniki:
-* `n_bins = 5` - różne maksymalne głębokości drzewa
+### Batch size
+batch size | historia | metryki
+-|-|-
+8 | ![wykres](plots/batch_size/history,layers=[512,256,128,64],batch_size=8,learn_rate=0.01,epochs=100.png) | ![wykres](plots/batch_size/metrics,layers=[512,256,128,64],batch_size=8,learn_rate=0.01,epochs=100.png)
+32 | ![wykres](plots/batch_size/history,layers=[512,256,128,64],batch_size=32,learn_rate=0.01,epochs=100.png) | ![wykres](plots/batch_size/metrics,layers=[512,256,128,64],batch_size=32,learn_rate=0.01,epochs=100.png)
+128 | ![wykres](plots/batch_size/history,layers=[512,256,128,64],batch_size=128,learn_rate=0.01,epochs=100.png) | ![wykres](plots/batch_size/metrics,layers=[512,256,128,64],batch_size=128,learn_rate=0.01,epochs=100.png)
+512 | ![wykres](plots/batch_size/history,layers=[512,256,128,64],batch_size=512,learn_rate=0.01,epochs=100.png) | ![wykres](plots/batch_size/metrics,layers=[512,256,128,64],batch_size=512,learn_rate=0.01,epochs=100.png)
 
-![wykres](plots/b=5&d=0.jpg)
-![wykres](plots/b=5&d=1.jpg)
-![wykres](plots/b=5&d=2.jpg)
-![wykres](plots/b=5&d=3.jpg)
-![wykres](plots/b=5&d=4.jpg)
-* `depth = 5` - różne "rozdzielczości" dyskretyzacji danych
+* im większy batch size, tym szybciej wykonują się epoki (jedna operacja na macierzy jest szybsza niż wiele operacji na jej wierszach, np. dzięki temu, że może zostać użyta jednostka wektorowa; kod z bibliotek może być już skompilowany; wielokrotne wywoływanie funkcji na każdym wierszu jest wolne)
+* im mniejszy batch size, tym większa skłonność modelu do przetrenowania (dla większych wartości tego parametru gradient wag jest średnią gradientów wag z większej próby, co lepiej przybliża zbiór walidacyjny / testowy)
+* większy batch size poprawia osiągi na zbiorze testowym, ale zbyt duży powoduje spowolnienie uczenia się i pogorsza osiągi.
 
-![wykres](plots/b=2&d=4.jpg)
-![wykres](plots/b=3&d=4.jpg)
-![wykres](plots/b=5&d=4.jpg)
-![wykres](plots/b=7&d=4.jpg)
+### Learning rate
+learning rate | historia | metryki
+-|-|-
+0.005 | ![wykres](plots/learning_rate/history,layers=[512,256,128,64],batch_size=128,learn_rate=0.005,epochs=100.png) | ![wykres](plots/learning_rate/metrics,layers=[512,256,128,64],batch_size=128,learn_rate=0.005,epochs=100.png)
+0.01 | ![wykres](plots/learning_rate/history,layers=[512,256,128,64],batch_size=128,learn_rate=0.01,epochs=100.png) | ![wykres](plots/learning_rate/metrics,layers=[512,256,128,64],batch_size=128,learn_rate=0.01,epochs=100.png)
+0.05 | ![wykres](plots/learning_rate/history,layers=[512,256,128,64],batch_size=128,learn_rate=0.05,epochs=100.png) | ![wykres](plots/learning_rate/metrics,layers=[512,256,128,64],batch_size=128,learn_rate=0.05,epochs=100.png)
+0.1 | ![wykres](plots/learning_rate/history,layers=[512,256,128,64],batch_size=128,learn_rate=0.1,epochs=100.png) | ![wykres](plots/learning_rate/metrics,layers=[512,256,128,64],batch_size=128,learn_rate=0.1,epochs=100.png)
 
-## Wnioski
+* zbyt mały learning rate powoduje, że model się wolniej uczy (wolna eksploracja, duża eksploatacja)
+* zbyt duży learning rate powoduje bardziej nieregularne wyniki w uczeniu się modelu, więc trudniej mu znaleźć optimum (szybka eksploracja, mała eksploatacja)
+* przekroczenie pewnego progu parametru learning rate powoduje, że model może rozbiegać od rozwiązania
 
+<!-- 
 1. Overfitting
 2. Underfitting
 3. Batch size
 4. learning rate
+-->
 
 </div>
