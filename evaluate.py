@@ -95,7 +95,7 @@ def plot_model(
     return
 
 
-def plot_history(history: List[NeuralNetworkHistoryRecord]):
+def plot_history(history: List[NeuralNetworkHistoryRecord], title: str):
     accuracies = np.array([record.accuracies() for record in history])
     losses = np.array([record.losses() for record in history])
 
@@ -105,18 +105,18 @@ def plot_history(history: List[NeuralNetworkHistoryRecord]):
     val_losses = losses[:, 1]
 
     fig, (ax_acc, ax_loss) = plt.subplots(1, 2, figsize=(16, 6))
-    fig.legend(['train', 'validation'])
     ax_acc: plt.Axes
     ax_loss: plt.Axes
 
     ax_acc.set_xlabel('epoch')
     ax_acc.set_ylabel('accuracy')
-    ax_acc.plot(train_accuracies)
-    ax_acc.plot(val_accuracies)
+    ax_acc.plot(train_accuracies, label='train')
+    ax_acc.plot(val_accuracies, label='validation')
 
     ax_loss.set_xlabel('epoch')
     ax_loss.set_ylabel('loss')
-    ax_loss.plot(train_losses)
-    ax_loss.plot(val_losses)
+    ax_loss.plot(train_losses, label='train')
+    ax_loss.plot(val_losses, label='validation')
 
+    fig.suptitle(title)
     fig.tight_layout()

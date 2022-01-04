@@ -1,90 +1,19 @@
-from typing import List
 from sklearn.preprocessing import OneHotEncoder
 import numpy as np
-from sklearn.datasets import load_iris, load_digits
+from sklearn.datasets import load_digits
 from sklearn.model_selection import train_test_split
-from evaluate import get_metrics, plot_model
+from evaluate import get_metrics, plot_model, plot_history
 from neural_network import (
     NeuralNetwork,
     Layer,
-    NeuralNetworkHistoryRecord,
     arctan,
     determine_class,
     grad_arctan,
     mse,
     mse_grad,
     relu,
-    grad_relu,
-    linear,
-    grad_linear)
+    grad_relu)
 from matplotlib import pyplot as plt
-
-
-def plot_history(history: List[NeuralNetworkHistoryRecord]):
-    accuracies = np.array([record.accuracies() for record in history])
-    losses = np.array([record.losses() for record in history])
-
-    train_accuracies = accuracies[:, 0]
-    val_accuracies = accuracies[:, 1]
-    train_losses = losses[:, 0]
-    val_losses = losses[:, 1]
-
-    fig, (ax_acc, ax_loss) = plt.subplots(1, 2, figsize=(16, 6))
-    fig.legend(['train', 'validation'])
-    ax_acc: plt.Axes
-    ax_loss: plt.Axes
-
-    ax_acc.set_xlabel('epoch')
-    ax_acc.set_ylabel('accuracy')
-    ax_acc.plot(train_accuracies, label='train')
-    ax_acc.plot(val_accuracies, label='validation')
-    ax_acc.legend()
-
-    ax_loss.set_xlabel('epoch')
-    ax_loss.set_ylabel('loss')
-    ax_loss.plot(train_losses, label='train')
-    ax_loss.plot(val_losses, label='validation')
-    ax_loss.legend()
-
-    fig.tight_layout()
-
-
-def iris():
-    X, y = load_iris(return_X_y=True)
-    X: np.ndarray
-    y: np.ndarray
-    y = y.reshape(-1, 1)
-
-    # shuffle (original is ordered)
-    indexes = np.arange(len(X))
-    np.random.shuffle(indexes)
-    X = X[indexes]
-    y = y[indexes]
-
-    y_enc = OneHotEncoder(sparse=False, dtype=np.int)
-    y = y_enc.fit_transform(y)
-
-    input_dim = X.shape[1]
-    hidden_dim = 16
-    output_dim = y.shape[1]
-
-    model = NeuralNetwork(is_classifier=True)
-    model.add_layer(Layer(input_dim, hidden_dim, relu, grad_relu))
-    model.add_layer(Layer(hidden_dim, output_dim, arctan, grad_arctan,
-                          output_inicialization=True))
-
-    history = model.fit(
-        X,
-        y,
-        learn_rate=0.0001,
-        epochs=200,
-        loss=mse,
-        loss_grad=mse_grad,
-        batch_size=64,
-        n_validation_splits=5)
-
-    plot_history(history)
-    plt.show()
 
 
 def minist():
@@ -122,7 +51,12 @@ def minist():
         loss_grad=mse_grad,
         batch_size=128)
 
-    plot_history(history)
+    total_time = sum(record.time for record in history)
+    mean_time = total_time / len(history)
+
+    plt_title = f'Neural network \nTotal time: {total_time:.1f}s; Time per epoch: {mean_time:.3f}s'
+
+    plot_history(history, plt_title)
     plt.show()
 
     y_train_pred = determine_class(model.predict(X_train))
@@ -137,7 +71,7 @@ def minist():
     test_metrics, test_cm = get_metrics(y_test, y_test_pred)
 
     plot_model((train_metrics, test_metrics), (train_cm, test_cm),
-               ("train", "test"), "Neural network")
+               ("train", "test"), plt_title)
     plt.show()
 
 

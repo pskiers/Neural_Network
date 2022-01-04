@@ -1,13 +1,10 @@
-from sklearn.model_selection import RepeatedKFold
 from typing import Callable, Generator, List, Tuple
 import numpy as np
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from sklearn.metrics import accuracy_score
-from sklearn.datasets import load_iris
 from numpy.random import uniform
-from numpy.core.fromnumeric import shape, size
 from functools import partial
-from math import ceil
+from timeit import timeit
 
 RToR = Callable[[float], float]
 RnToRn = Callable[[np.ndarray], np.ndarray]
@@ -143,6 +140,7 @@ class NeuralNetworkHistoryRecord:
     val_true: np.ndarray
     val_pred: np.ndarray
     loss: R2nToRn
+    time: float
 
     def losses(self) -> Tuple[float, float]:
         return (self.loss(self.train_true, self.train_pred).mean(),
@@ -162,8 +160,8 @@ class NeuralNetworkHistoryRecord:
         train_loss, val_loss = self.losses()
         train_acc, val_acc = self.accuracies()
         tabs = tabs * "\t"
-        return (f'train_loss: {train_loss:<18}, train_acc: {train_acc}\n{tabs}'
-                f'val_loss  : {val_loss:<18}, val_acc  : {val_acc}')
+        return (f'{tabs}train_loss: {train_loss:.5f}, train_acc: {train_acc:.5f}\n'
+                f'{tabs}val_loss  : {val_loss:.5f}, val_acc  : {val_acc:.5f}')
 
 
 def _to_batches(X: np.ndarray, y: np.ndarray, batch_size: int
@@ -214,7 +212,8 @@ class NeuralNetwork:
 
     def _validate(self, loss: R2nToRn,
                   X_train: np.ndarray, y_train: np.ndarray,
-                  X_val: np.ndarray, y_val: np.ndarray) -> NeuralNetworkHistoryRecord:
+                  X_val: np.ndarray, y_val: np.ndarray,
+                  time: float) -> NeuralNetworkHistoryRecord:
         y_train_pred = self.predict(X_train)
         y_val_pred = self.predict(X_val)
         return NeuralNetworkHistoryRecord(
@@ -222,7 +221,8 @@ class NeuralNetwork:
             train_pred=y_train_pred,
             val_true=y_val,
             val_pred=y_val_pred,
-            loss=loss
+            loss=loss,
+            time=time
         )
 
     def fit(self, X_train: np.ndarray, y_train: np.ndarray,
@@ -237,16 +237,19 @@ class NeuralNetwork:
 
         try:
             for i in range(epochs):
-                self._fit_epoch(X_train, y_train,
-                                learn_rate=learn_rate,
-                                batch_size=batch_size,
-                                loss_grad=loss_grad,)
+                time = timeit(
+                    lambda: self._fit_epoch(
+                        X_train, y_train,
+                        learn_rate=learn_rate,
+                        batch_size=batch_size,
+                        loss_grad=loss_grad),
+                    number=1)
                 record = self._validate(
-                    loss, X_train, y_train, X_val, y_val)
+                    loss, X_train, y_train, X_val, y_val, time)
                 history.append(record)
                 msg = record.all_str(
                     2) if self._is_classifier else record.losses_str()
-                print(f'EPOCH {i+1}:\t{msg}')
+                print(f'EPOCH {i+1} [{time:.3f}s]:\n{msg}')
         except KeyboardInterrupt:
             pass
 
